@@ -177,10 +177,10 @@ class AmazonScraper:
                 T3 = threading.Thread(target=self.get_product_search_price, args=(data,count,))
                 T3.start()
                 T4_time = time.time()
-                T4 = threading.Thread(target=self.get_product_search_price_symbol, args=(data,count,))
+                T4 = threading.Thread(target=self.get_product_delivery_data, args=(data,count,))
                 T4.start()
                 T5_time = time.time()
-                T5 = threading.Thread(target=self.get_product_search_whole_price, args=(data,count,))
+                T5 = threading.Thread(target=self.get_product_rating_data, args=(data,count,))
                 T5.start()
                 T6_time = time.time()
                 T6 = threading.Thread(target=self.get_product_search_image, args=(data,count,))
@@ -231,33 +231,53 @@ class AmazonScraper:
         return
 
     def get_product_search_price(self, data, count):
-        price_with_symbol = "N/A"
+        price_dict = dict()
         try:
-            price_with_symbol = data.find('span', {'class' : 'a-price'}).find('span', {'class' : 'a-offscreen'}).text
+            price_section = data.find('div', {'class' : 'a-row a-size-base a-color-base'})
+            if price_section is not None:
+                save_list = price_section.text.split()[2:]
+                prv_p_txt = price_section.find('span', {'class' : 'a-text-price'}).text
+                prv_p_txt = prv_p_txt[0]
+                prv_p = price_section.find('span', {'class' : 'a-text-price'}).text.split(prv_p_txt)[-1:] if price_section.find('span', {'class' : 'a-text-price'}) else None
+                price_dict['price_symbol'] = price_section.find('span', {'class' : 'a-price-symbol'}).text if price_section.find('span', {'class' : 'a-price-symbol'}) else None
+                price_dict['current_price'] = price_section.find('span', {'class' : 'a-price-whole'}).text if price_section.find('span', {'class' : 'a-price-whole'}) else None
+                price_dict['previous_price'] = prv_p[0] if prv_p else None
+                price_dict['save_price'] = save_list[1] if save_list else None
+                price_dict['save_percentage'] = save_list[2].replace('(', '').replace(')', '') if save_list else None
         except Exception as e:
             pass
         finally:
-            self.data_list[str(count)]['product_price'] = price_with_symbol
+            self.data_list[str(count)]['product_price'] = price_dict
         return
 
-    def get_product_search_price_symbol(self, data, count):
-        price_symbol = "N/A"
+    def get_product_delivery_data(self, data, count):
+        delivery_list = set()
         try:
-            price_symbol = data.find('span', {'class' : 'a-price'}).find('span', {'class' : 'a-price-symbol'}).text
+            delivery_section = data.find('div', {'class' : 'a-row a-size-base a-color-secondary s-align-children-center'})
+            if delivery_section is not None:
+                spans = delivery_section.findAll('span')
+                for spn in spans:
+                    if spn.text:
+                        delivery_list.add(spn.text)
         except Exception as e:
             pass
         finally:
-            self.data_list[str(count)]['product_price_symbol'] = price_symbol
+            self.data_list[str(count)]['product_delivery'] = delivery_list
         return
 
-    def get_product_search_whole_price(self, data, count):
-        price_whole = "N/A"
+    def get_product_rating_data(self, data, count):
+        rating_list = set()
         try:
-            price_whole = data.find('span', {'class' : 'a-price'}).find('span', {'class' : 'a-price-whole'}).text
+            rating_section = data.find('div', {'class' : 'a-section a-spacing-none a-spacing-top-micro'})
+            if rating_section is not None:
+                spans = rating_section.findAll('span')
+                for spn in spans:
+                    if spn.text:
+                        rating_list.add(spn.text)
         except Exception as e:
             pass
         finally:
-            self.data_list[str(count)]['product_price_whole'] = price_whole
+            self.data_list[str(count)]['product_rating'] = rating_list
         return
 
     def get_product_search_image(self, data, count):
@@ -293,7 +313,7 @@ class AmazonScraper:
             T7 = threading.Thread(target=self.single_product_details, args=(check,))
             T7.start()
             T8_time = time.time()
-            T8 = threading.Thread(target=self.single_product_price_only, args=(check,))
+            T8 = threading.Thread(target=self.single_product_miscellaneous, args=(check,))
             T8.start()
         except Exception as e:
             pass
@@ -393,45 +413,43 @@ class AmazonScraper:
         return
 
     def single_product_price(self, check = False):
-        sell_price = "₹0.00"
-        try:
-            sell_price = self.soup_data.find('span', {'id' : 'priceblock_ourprice'}).text.strip()
-        except Exception as e:
-            try:
-                sell_price = self.soup_data.find('span', {'id' : 'currencyINR'}).text.strip()
-            except Exception as e:
-                try:
-                    sell_price = self.soup_data.find('span', {'id' : 'priceblock_dealprice'}).text.strip()
-                    pass
-                except Exception as e:
-                    if check:
-                        print(e)
-                if check:
-                    print(e)
-            if check:
-                print(e)
-            else:
-                pass
-        finally:
-            self.single_product_list['product_price'] = sell_price
+        price_set = dict()
+        price_section = self.soup_data.find('div', {'id' : 'price'})
+
+        if price_section is not None:
+            previous_price = price_section.find('span', {'class' : 'priceBlockStrikePriceString a-text-strike' })
+            curr_price = price_section.find('span', {'id' : 'priceblock_ourprice' })
+            save_price = price_section.find('tr', {'id' : 'regularprice_savings' })
+        
+        if curr_price == None:
+            curr_price = price_section.find('span', {'id' : 'priceblock_dealprice' })
+        if save_price == None:
+            save_price = price_section.find('tr', {'id' : 'dealprice_savings' })
+
+        if previous_price is not None:
+            previous_price = previous_price.text.strip()
+
+        if curr_price is not None:
+            curr_price = curr_price.text.strip()
+
+        if save_price is not None:
+            save_price = save_price.text.strip().replace('\n', '')
+
+        price_set['previous_price'] = previous_price
+        price_set['curr_price'] = curr_price
+        price_set['save_price'] = save_price
+        self.single_product_list['product_price'] = price_set
         return
 
-    def single_product_price_only(self, check = False):
-        sell_price = "₹0.00"
-        try:
-            sell_price = self.soup_data.find('span', {'id' : 'priceblock_ourprice'}).text.strip()
-        except Exception as e:
-            try:
-                sell_price = self.soup_data.find('span', {'id' : 'currencyINR'}).text.strip()
-            except Exception as e:
-                if check:
-                    print(e)
-            if check:
-                print(e)
-            else:
-                pass
-        finally:
-            self.single_product_list['product_price_only'] = sell_price[1:] if sell_price and len(sell_price) else ""
+    def single_product_miscellaneous(self, check = False):
+        #review
+        review_section = self.soup_data.find('div', {'id' : 'averageCustomerReviews'})
+        if review_section is not None:
+            self.single_product_list['product_review'] = review_section.text.replace('\n', '')
+        #available
+        available_section = self.soup_data.find('div', {'id' : 'availability'})
+        if available_section is not None:
+            self.single_product_list['product_available'] = available_section.text.replace('\n', '')
         return
 
     def single_product_details(self, check = False):
@@ -462,6 +480,7 @@ class AmazonScraper:
 if __name__ == "__main__":
     full_path = os.path.abspath(os.getcwd()) + "/webdrivers/chromedriver_linux64/chromedriver"
     amazonSc = AmazonScraper("chrome", full_path)
-    amazonSc.amazon_product_search("Mobile", 1, True)
-    # url = "https://www.amazon.in/Redmi-9A-2GB-32GB-Storage/dp/B08696XB4B/ref=sr_1_3?dchild=1&keywords=mobile&qid=1629271762&sr=8-3"
-    # amazonSc.get_single_product_details(url,True)
+    # amazonSc.amazon_product_search("Mobile", 1, True)
+    # print(amazonSc.amazon_product_search("Mobile", 1, True))
+    url = "https://www.amazon.in/Borges-Extra-Virgin-Olive-Oil/dp/B0046XESXW?ref_=Oct_DLandingS_D_bbbf19d1_65&smid=AT95IG9ONZD7S"
+    amazonSc.get_single_product_details(url,True)
