@@ -1,4 +1,4 @@
-# amazon_search_scraper_bc
+# amazon-search-scraper-bc
 
 amazon_search_scraper_bc is a Python library for getting amazon search data and product details data in your project.
 
@@ -7,7 +7,7 @@ amazon_search_scraper_bc is a Python library for getting amazon search data and 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install amazon_search_scraper_bc.
 
 ```bash
-pip install amazon_search_scraper_bc
+pip install amazon-search-scraper-bc
 ```
 
 ## Usage
