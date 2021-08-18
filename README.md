@@ -1,7 +1,7 @@
 # amazon-search-scraper-bc
 
 amazon_search_scraper_bc is a Python library for getting amazon search data and product details data in your project.
-Especially when you want data in runtime.
+Especially when you want realtime data.
 
 ## Installation
 
