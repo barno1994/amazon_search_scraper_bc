@@ -4,7 +4,7 @@ amazon_search_scraper_bc is a Python library for getting amazon search data and 
 
 ## Installation
 
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install amazon_search_scraper_bc.
 
 ```bash
 pip install amazon_search_scraper_bc
